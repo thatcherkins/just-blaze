@@ -196,14 +196,13 @@ export class GeoDataManager {
    * @return Result of rectangle query request.
    */
   public async queryRectangle(queryRectangleInput: QueryRectangleInput): Promise<DynamoDB.ItemList> {
-    console.info('do not filter results');
     const latLngRect: S2LatLngRect = S2Util.latLngRectFromQueryRectangleInput(queryRectangleInput);
 
     const covering = new Covering(new this.config.S2RegionCoverer().getCoveringCells(latLngRect));
 
     const results = await this.dispatchQueries(covering, queryRectangleInput);
-    return results;
-    //return this.filterByRectangle(results, queryRectangleInput);
+    //return results;
+    return this.filterByRectangle(results, queryRectangleInput);
   }
 
   /**
