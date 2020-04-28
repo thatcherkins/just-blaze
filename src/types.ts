@@ -17,6 +17,7 @@ export interface GeoPoint {
 }
 export interface GeoQueryInput {
   QueryInput?: DynamoDB.QueryInput;
+  MaxNumberResults: number;
 }
 export interface GeoQueryOutput extends DynamoDB.QueryOutput {
 }

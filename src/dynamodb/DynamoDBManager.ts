@@ -50,8 +50,9 @@ export class DynamoDBManager {
    *
    * @return The query result.
    */
-  public async queryGeohash(queryInput: DynamoDB.QueryInput | undefined, hashKey: Long, range: GeohashRange): Promise<DynamoDB.QueryOutput[]> {
+  public async queryGeohash(queryInput: DynamoDB.QueryInput | undefined, hashKey: Long, range: GeohashRange,maxResults: number): Promise<DynamoDB.QueryOutput[]> {
     const queryOutputs: DynamoDB.QueryOutput[] = [];
+    let totalNumberOfItems: number = 0;
 
     const nextQuery = async (lastEvaluatedKey: DynamoDB.Key = null) => {
       const keyConditions: { [key: string]: DynamoDB.Condition } = {};
@@ -75,12 +76,18 @@ export class DynamoDBManager {
         IndexName: this.config.geohashIndexName,
         ConsistentRead: this.config.consistentRead,
         ReturnConsumedCapacity: "TOTAL",
-        ExclusiveStartKey: lastEvaluatedKey
+        ExclusiveStartKey: lastEvaluatedKey,
       };
 
       const queryOutput = await this.config.dynamoDBClient.query({ ...defaults, ...queryInput }).promise();
+      //apply max results filter
+      if (queryOutput.Items && queryOutput.Items.length > 0){
+        totalNumberOfItems = totalNumberOfItems + queryOutput.Items.length;
+      }
+
       queryOutputs.push(queryOutput);
-      if (queryOutput.LastEvaluatedKey) {
+
+      if (totalNumberOfItems < maxResults && queryOutput.LastEvaluatedKey) {
         return nextQuery(queryOutput.LastEvaluatedKey);
       }
     };

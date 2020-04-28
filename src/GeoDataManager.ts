@@ -35,6 +35,7 @@ import { S2Manager } from "./s2/S2Manager";
 import { S2Util } from "./s2/S2Util";
 import { S2LatLng, S2LatLngRect } from "nodes2ts";
 import { Covering } from "./model/Covering";
+import { GeohashRange } from "./model/GeohashRange";
 
 /**
  * <p>
@@ -306,13 +307,15 @@ export class GeoDataManager {
    * @return Aggregated and filtered items returned from Amazon DynamoDB.
    */
   private async dispatchQueries(covering: Covering, geoQueryInput: GeoQueryInput) {
-    const promises: Promise<DynamoDB.QueryOutput[]>[] = covering.getGeoHashRanges(this.config.hashKeyLength).map(range => {
+    const ranges: GeohashRange[] = covering.getGeoHashRanges(this.config.hashKeyLength);
+    const resultsPerQuery: number = Math.floor(geoQueryInput.MaxNumberResults / ranges.length);
+    console.info('max results per query', resultsPerQuery);
+    const promises: Promise<DynamoDB.QueryOutput[]>[] = ranges.map(range => {
       const hashKey = S2Manager.generateHashKey(range.rangeMin, this.config.hashKeyLength);
-      return this.dynamoDBManager.queryGeohash(geoQueryInput.QueryInput, hashKey, range);
+      return this.dynamoDBManager.queryGeohash(geoQueryInput.QueryInput, hashKey, range, resultsPerQuery);
     });
 
     const results: DynamoDB.QueryOutput[][] = await Promise.all(promises);
-    console.info('done searching...');
     const mergedResults = [];
     results.forEach(queryOutputs => queryOutputs.forEach(queryOutput => mergedResults.push(...queryOutput.Items)));
     return mergedResults;
